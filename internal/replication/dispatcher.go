@@ -106,8 +106,20 @@ func (d *Dispatcher) journalPlan(plan Plan) error {
 	if d.journal == nil {
 		return nil
 	}
+	if d.journal.Closed() {
+		d.budget.Release(plan.ID)
+		reason := "journal-closed"
+		if d.audit != nil {
+			d.audit.Record("replication-plan-rolled-back", plan.SnapshotID, fmt.Sprintf("plan=%s reason=%s", plan.ID, reason), d.clock())
+		}
+		return model.ErrJournalClosed
+	}
 	entry := journal.Entry{Generation: plan.Generation, Kind: "replication-plan", SnapshotID: plan.SnapshotID, Operation: plan.ID, Detail: fmt.Sprintf("destinations=%d bytes=%d", len(plan.Destinations), plan.TotalBytes), RecordedAt: d.clock()}
 	if _, err := d.journal.Append(entry); err != nil {
+		d.budget.Release(plan.ID)
+		if d.audit != nil {
+			d.audit.Record("replication-plan-rolled-back", plan.SnapshotID, plan.ID, d.clock())
+		}
 		return err
 	}
 	return nil

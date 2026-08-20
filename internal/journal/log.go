@@ -74,6 +74,15 @@ func (l *Log) Open() {
 	l.closed = false
 }
 
+func (l *Log) Closed() bool {
+	if l == nil {
+		return true
+	}
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.closed
+}
+
 func LatestByOperation(entries []Entry) []Entry {
 	latest := make(map[string]Entry)
 	order := make([]string, 0)
