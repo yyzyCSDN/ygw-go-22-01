@@ -38,7 +38,9 @@ func (s *Store) Commit(receipt model.VerificationReceipt) {
 func (s *Store) Delete(snapshotID string, generation uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.receipts, snapshotID)
+	if receipt, ok := s.receipts[snapshotID]; ok && receipt.Generation == generation {
+		delete(s.receipts, snapshotID)
+	}
 }
 
 func (s *Store) Receipt(snapshotID string) (model.VerificationReceipt, bool) {
