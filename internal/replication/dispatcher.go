@@ -87,7 +87,9 @@ func (d *Dispatcher) planGuard(snapshot model.Snapshot) error {
 }
 
 func (d *Dispatcher) reservePlan(plan Plan) error {
-	d.budget.Reserve(plan.ID, plan.TotalBytes)
+	if !d.budget.Reserve(plan.ID, plan.TotalBytes) {
+		return fmt.Errorf("replication: budget cannot reserve %d bytes for plan %s", plan.TotalBytes, plan.ID)
+	}
 	return nil
 }
 
@@ -115,6 +117,9 @@ func (d *Dispatcher) journalPlan(plan Plan) error {
 }
 
 func (d *Dispatcher) finishPlan(plan Plan) error {
+	if d.budget.Reserved(plan.ID) {
+		return fmt.Errorf("replication: plan %s for snapshot %s is already in flight", plan.ID, plan.SnapshotID)
+	}
 	if err := d.reservePlan(plan); err != nil {
 		return err
 	}

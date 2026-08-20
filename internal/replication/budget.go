@@ -22,12 +22,30 @@ func (b *Budget) Reserve(planID string, bytes int64) bool {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if _, exists := b.reservations[planID]; exists {
+		// The plan already holds an active reservation. Reserving it again
+		// would overwrite the existing entry yet still charge the bytes a
+		// second time, letting one snapshot consume the same quota twice.
+		return false
+	}
 	if b.used+bytes > b.limit {
 		return false
 	}
 	b.reservations[planID] = bytes
 	b.used += bytes
 	return true
+}
+
+// Reserved reports whether planID currently holds an active (unreleased)
+// reservation, i.e. the plan is in flight and has not yet been completed.
+func (b *Budget) Reserved(planID string) bool {
+	if b == nil || planID == "" {
+		return false
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	_, exists := b.reservations[planID]
+	return exists
 }
 
 func (b *Budget) Snapshot() (used, limit int64, reserved int) {
