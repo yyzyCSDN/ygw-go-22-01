@@ -46,7 +46,8 @@ func (s *Service) StageChunk(handle model.CaptureHandle, index int, data []byte)
 
 func (s *Service) CommitCapture(handle model.CaptureHandle, baseID string, full bool, metadata map[string]string) (model.Snapshot, error) {
 	started := s.clock.Now()
-	defer func() { s.telemetry.Observe("capture.commit", handle.SnapshotID, started, true, s.clock.Now()) }()
+	succeeded := false
+	defer func() { s.observeCapture(handle.SnapshotID, started, succeeded) }()
 	resource := "capture:" + handle.SnapshotID
 	if err := s.leases.Validate(resource, handle.Owner, handle.LeaseEpoch, s.clock.Now()); err != nil {
 		return model.Snapshot{}, err
@@ -72,7 +73,12 @@ func (s *Service) CommitCapture(handle model.CaptureHandle, baseID string, full 
 		return model.Snapshot{}, err
 	}
 	committed, _ := s.catalog.Snapshot(handle.SnapshotID)
+	succeeded = true
 	return committed, nil
+}
+
+func (s *Service) observeCapture(snapshotID string, started time.Time, succeeded bool) {
+	s.telemetry.Observe("capture.commit", snapshotID, started, succeeded, s.clock.Now())
 }
 
 func (s *Service) AbortCapture(handle model.CaptureHandle) error {

@@ -274,3 +274,6 @@ func (s *Service) OrchestrationRunbookTotal() int {
 	return s.orchestration.Runbook().Total()
 }
 
+func (s *Service) CaptureFailureCount(name string) uint64 {
+	return s.telemetry.FailureCount(name)
+}

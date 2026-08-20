@@ -44,8 +44,8 @@ func (r *Registry) Observe(name, snapshot string, started time.Time, succeeded b
 	r.mu.Lock()
 	r.counters[name]++
 	r.latency[name] += d
-	r.events = append(r.events, Event{Name: name, Snapshot: snapshot, At: now, Duration: d, Succeeded: true})
-	r.window.Add(Event{Name: name, Snapshot: snapshot, At: now, Duration: d, Succeeded: true})
+	r.events = append(r.events, Event{Name: name, Snapshot: snapshot, At: now, Duration: d, Succeeded: succeeded})
+	r.window.Add(Event{Name: name, Snapshot: snapshot, At: now, Duration: d, Succeeded: succeeded})
 	if len(r.events) > r.limit {
 		copy(r.events, r.events[len(r.events)-r.limit:])
 		r.events = r.events[:r.limit]
@@ -60,6 +60,21 @@ func (r *Registry) Count(name string) uint64 {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.counters[name]
+}
+
+func (r *Registry) FailureCount(name string) uint64 {
+	if r == nil {
+		return 0
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var failures uint64
+	for _, event := range r.events {
+		if event.Name == name && !event.Succeeded {
+			failures++
+		}
+	}
+	return failures
 }
 
 func (r *Registry) AverageLatency(name string) time.Duration {
