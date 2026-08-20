@@ -207,7 +207,7 @@ func (s *Service) ReplicationOutcomes() []replication.Outcome {
 }
 
 func (s *Service) ReplicationStatus() (int64, int) {
-	return s.replication.BudgetUsed(), 0
+	return s.replication.Status()
 }
 
 func (s *Service) ReplicationOutcomeSummary() (int, int, int) {

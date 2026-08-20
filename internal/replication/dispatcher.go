@@ -139,6 +139,8 @@ func (d *Dispatcher) finishPlan(plan Plan) error {
 }
 
 func (d *Dispatcher) markCompleted(planID string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	if d.completed[planID] {
 		return false
 	}
@@ -164,8 +166,11 @@ func (d *Dispatcher) Complete(plan Plan, succeeded bool) {
 }
 
 func (d *Dispatcher) Status() (used int64, completed int) {
-	used = d.budget.Used()
-	return used, 0
+	used, _, _ = d.budget.Snapshot()
+	d.mu.Lock()
+	completed = len(d.completed)
+	d.mu.Unlock()
+	return used, completed
 }
 
 func (d *Dispatcher) OutcomeSummary() (total, succeeded, failed int) {

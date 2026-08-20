@@ -43,6 +43,15 @@ func (b *Budget) HasReservation(planID string) bool {
 	return exists
 }
 
+func (b *Budget) Snapshot() (used, limit int64, reserved int) {
+	if b == nil {
+		return 0, 0, 0
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.used, b.limit, len(b.reservations)
+}
+
 func (b *Budget) Release(planID string) int64 {
 	if b == nil {
 		return 0
@@ -65,6 +74,8 @@ func (b *Budget) Used() int64 {
 	if b == nil {
 		return 0
 	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
 	return b.used
 }
 
