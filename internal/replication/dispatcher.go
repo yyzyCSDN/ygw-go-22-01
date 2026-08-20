@@ -60,7 +60,13 @@ func (d *Dispatcher) PlanSnapshot(snapshot model.Snapshot) (Plan, error) {
 	if err := validatePlanableSnapshot(snapshot); err != nil {
 		return Plan{}, err
 	}
-	destinations := d.registry.Eligible(1)
+	destinations, _, err := d.eligibleForSnapshot(snapshot)
+	if err != nil {
+		return Plan{}, err
+	}
+	if len(destinations) == 0 {
+		return Plan{}, fmt.Errorf("replication: no destination capacity for snapshot %s", snapshot.ID)
+	}
 	plan, err := d.planner.Build(snapshot, destinations, d.clock().Unix())
 	if err != nil {
 		return Plan{}, err
@@ -183,6 +189,15 @@ func (d *Dispatcher) OutcomeSummary() (total, succeeded, failed int) {
 
 func (d *Dispatcher) eligibleForChunks(chunks []ChunkPlan) ([]Destination, int64, error) {
 	total, err := totalChunkBytes(chunks)
+	if err != nil {
+		return nil, 0, err
+	}
+	destinations := d.registry.Eligible(total)
+	return destinations, total, nil
+}
+
+func (d *Dispatcher) eligibleForSnapshot(snapshot model.Snapshot) ([]Destination, int64, error) {
+	total, err := totalSnapshotBytes(snapshot.Chunks)
 	if err != nil {
 		return nil, 0, err
 	}
