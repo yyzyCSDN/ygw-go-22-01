@@ -203,18 +203,15 @@ func (s *Service) ReplicationBudgetUsed() int64 {
 }
 
 func (s *Service) ReplicationOutcomes() []replication.Outcome {
-	all := s.replication.Outcomes()
-	filtered := make([]replication.Outcome, 0, len(all))
-	for _, outcome := range all {
-		if !outcome.Succeeded {
-			filtered = append(filtered, outcome)
-		}
-	}
-	return filtered
+	return s.replication.Outcomes()
 }
 
 func (s *Service) ReplicationStatus() (int64, int) {
 	return s.replication.Status()
+}
+
+func (s *Service) ReplicationOutcomeSummary() (int, int, int) {
+	return s.replication.OutcomeSummary()
 }
 
 func (s *Service) RegisterOrchestrationPolicy(policy orchestrator.Policy) bool {
