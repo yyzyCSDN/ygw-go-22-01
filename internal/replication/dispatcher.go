@@ -118,6 +118,7 @@ func (d *Dispatcher) finishPlan(plan Plan) error {
 		return err
 	}
 	if err := d.journalPlan(plan); err != nil {
+		d.budget.Release(plan.ID)
 		return err
 	}
 	if d.audit != nil {
