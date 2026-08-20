@@ -39,11 +39,16 @@ func (s *Service) FinishRestore(plan model.RestorePlan, owner string) error {
 	if !ok {
 		return model.ErrNotFound
 	}
-	s.catalog.RemoveRestoreReference(plan.ID, plan.SnapshotID)
 	if _, err := s.journal.Append(journal.Entry{Generation: active.Epoch, Kind: "restore-complete", SnapshotID: plan.SnapshotID, Operation: plan.ID, RecordedAt: s.clock.Now()}); err != nil {
 		return err
 	}
-	return s.leases.Release(resource, owner, active.Epoch)
+	if err := s.leases.Release(resource, owner, active.Epoch); err != nil {
+		return err
+	}
+	if !s.catalog.RemoveRestoreReference(plan.ID, plan.SnapshotID) {
+		return model.ErrNotFound
+	}
+	return nil
 }
 
 func (s *Service) ApplyRetention(keep int) []string { return s.catalog.ExpireUnprotected(keep) }

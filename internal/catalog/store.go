@@ -125,13 +125,18 @@ func (s *Store) AddRestoreReference(planID, snapshotID string) {
 	refs[planID] = struct{}{}
 }
 
-func (s *Store) RemoveRestoreReference(planID, snapshotID string) {
+func (s *Store) RemoveRestoreReference(planID, snapshotID string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.restoreRefs[snapshotID], planID)
-	if len(s.restoreRefs[snapshotID]) == 0 {
+	refs := s.restoreRefs[snapshotID]
+	if _, exists := refs[planID]; !exists {
+		return false
+	}
+	delete(refs, planID)
+	if len(refs) == 0 {
 		delete(s.restoreRefs, snapshotID)
 	}
+	return true
 }
 
 func (s *Store) ExpireUnprotected(keep int) []string {
