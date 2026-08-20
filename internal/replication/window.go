@@ -37,11 +37,21 @@ func (w *Window) Add(outcome Outcome) {
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	w.addUniqueLocked(outcome)
+}
+
+func (w *Window) addUniqueLocked(outcome Outcome) bool {
+	for _, existing := range w.items {
+		if existing.PlanID == outcome.PlanID && existing.Destination == outcome.Destination {
+			return false
+		}
+	}
 	if outcome.At.IsZero() {
 		outcome.At = w.clock().UTC()
 	}
 	w.items = append(w.items, outcome)
 	w.pruneLocked(w.clock())
+	return true
 }
 
 func (w *Window) pruneLocked(now time.Time) {

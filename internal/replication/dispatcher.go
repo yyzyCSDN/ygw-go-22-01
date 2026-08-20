@@ -138,8 +138,21 @@ func (d *Dispatcher) finishPlan(plan Plan) error {
 	return nil
 }
 
+func (d *Dispatcher) markCompleted(planID string) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.completed[planID] {
+		return false
+	}
+	d.completed[planID] = true
+	return true
+}
+
 func (d *Dispatcher) Complete(plan Plan, succeeded bool) {
 	if d == nil {
+		return
+	}
+	if !d.markCompleted(plan.ID) {
 		return
 	}
 	d.budget.Release(plan.ID)
