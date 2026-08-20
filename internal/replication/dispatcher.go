@@ -60,7 +60,11 @@ func (d *Dispatcher) PlanSnapshot(snapshot model.Snapshot) (Plan, error) {
 	if err := validatePlanableSnapshot(snapshot); err != nil {
 		return Plan{}, err
 	}
-	destinations := d.registry.Eligible(1)
+	total, err := totalSnapshotBytes(snapshot.Chunks)
+	if err != nil {
+		return Plan{}, err
+	}
+	destinations := d.registry.Eligible(total)
 	plan, err := d.planner.Build(snapshot, destinations, d.clock().Unix())
 	if err != nil {
 		return Plan{}, err

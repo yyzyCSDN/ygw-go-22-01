@@ -3,6 +3,7 @@ package replication
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"example.com/backupmesh/internal/model"
 )
@@ -51,6 +52,19 @@ func validatePlanableSnapshot(snapshot model.Snapshot) error {
 	return nil
 }
 
+func validateDestinationCapacity(destinations []Destination, total int64) error {
+	var undersized []string
+	for _, destination := range destinations {
+		if destination.Capacity < total {
+			undersized = append(undersized, fmt.Sprintf("%s(capacity=%d)", destination.ID, destination.Capacity))
+		}
+	}
+	if len(undersized) > 0 {
+		return fmt.Errorf("replication: destinations lack capacity for %d bytes: %s", total, strings.Join(undersized, ", "))
+	}
+	return nil
+}
+
 func (p *Planner) Build(snapshot model.Snapshot, destinations []Destination, createdAtUnix int64) (Plan, error) {
 	if err := validatePlanableSnapshot(snapshot); err != nil {
 		return Plan{}, err
@@ -75,5 +89,8 @@ func (p *Planner) Build(snapshot model.Snapshot, destinations []Destination, cre
 	}
 	sort.Slice(chunks, func(i, j int) bool { return chunks[i].Index < chunks[j].Index })
 	sort.Slice(destinations, func(i, j int) bool { return destinations[i].ID < destinations[j].ID })
+	if err := validateDestinationCapacity(destinations, total); err != nil {
+		return Plan{}, err
+	}
 	return Plan{ID: fmt.Sprintf("rep-%s-%d", snapshot.ID, snapshot.Generation), SnapshotID: snapshot.ID, Generation: snapshot.Generation, Destinations: append([]Destination(nil), destinations...), Chunks: chunks, TotalBytes: total, CreatedAtUnix: createdAtUnix}, nil
 }
