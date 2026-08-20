@@ -87,7 +87,18 @@ func (d *Dispatcher) planGuard(snapshot model.Snapshot) error {
 }
 
 func (d *Dispatcher) reservePlan(plan Plan) error {
-	d.budget.Reserve(plan.ID, plan.TotalBytes)
+	if d.budget.HasReservation(plan.ID) {
+		if d.audit != nil {
+			d.audit.Record("replication-quota-rejected", plan.SnapshotID, plan.ID, d.clock())
+		}
+		return fmt.Errorf("replication: plan %s already reserved", plan.ID)
+	}
+	if !d.budget.Reserve(plan.ID, plan.TotalBytes) {
+		if d.audit != nil {
+			d.audit.Record("replication-quota-rejected", plan.SnapshotID, plan.ID, d.clock())
+		}
+		return fmt.Errorf("replication: quota exhausted for plan %s", plan.ID)
+	}
 	return nil
 }
 

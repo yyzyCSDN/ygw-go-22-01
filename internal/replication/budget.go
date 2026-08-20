@@ -22,12 +22,25 @@ func (b *Budget) Reserve(planID string, bytes int64) bool {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if _, exists := b.reservations[planID]; exists {
+		return false
+	}
 	if b.used+bytes > b.limit {
 		return false
 	}
 	b.reservations[planID] = bytes
 	b.used += bytes
 	return true
+}
+
+func (b *Budget) HasReservation(planID string) bool {
+	if b == nil || planID == "" {
+		return false
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	_, exists := b.reservations[planID]
+	return exists
 }
 
 func (b *Budget) Snapshot() (used, limit int64, reserved int) {
